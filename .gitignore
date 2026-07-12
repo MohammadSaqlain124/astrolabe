@@ -1,0 +1,13 @@
+venv/
+__pycache__/
+*.pyc
+
+# large, auto-downloaded — regenerable
+data/de421.bsp
+
+# local database and fetched cache — regenerable
+data/astronomy.db
+data/iss_tle.txt
+
+# secrets (for later phases)
+.env

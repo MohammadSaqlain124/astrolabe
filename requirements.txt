@@ -1,0 +1,14 @@
+# Astronomy Event Tracker — Python dependencies
+# Install with:  pip install -r requirements.txt
+
+skyfield==1.54          # satellite propagation + sun/moon/twilight astronomy
+
+# --- added in later phases (listed now so the roadmap is visible) ---
+# fastapi              # web API layer
+# uvicorn              # server to run FastAPI
+# apscheduler          # scheduled ingestion jobs (the node-cron equivalent)
+# httpx                # HTTP client for fetching orbital/eclipse data
+# python-dotenv        # load secrets from a .env file
+SQLAlchemy>=2.0.30,<3.0
+httpx
+apscheduler
