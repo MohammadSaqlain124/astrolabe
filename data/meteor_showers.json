@@ -1,0 +1,13 @@
+{
+  "_source": "Approximate values compiled from IAU Meteor Data Center / American Meteor Society. Peak dates shift by ~1 day year to year; radiants and ZHR are typical values.",
+  "showers": [
+    {"name": "Quadrantids",   "peak_month": 1,  "peak_day": 4,  "radiant_ra_hours": 15.33, "radiant_dec_deg": 49.0,  "zhr": 110},
+    {"name": "Lyrids",        "peak_month": 4,  "peak_day": 22, "radiant_ra_hours": 18.13, "radiant_dec_deg": 34.0,  "zhr": 18},
+    {"name": "Eta Aquariids", "peak_month": 5,  "peak_day": 6,  "radiant_ra_hours": 22.50, "radiant_dec_deg": -1.0,  "zhr": 50},
+    {"name": "Perseids",      "peak_month": 8,  "peak_day": 12, "radiant_ra_hours": 3.20,  "radiant_dec_deg": 58.0,  "zhr": 100},
+    {"name": "Orionids",      "peak_month": 10, "peak_day": 21, "radiant_ra_hours": 6.33,  "radiant_dec_deg": 16.0,  "zhr": 20},
+    {"name": "Leonids",       "peak_month": 11, "peak_day": 17, "radiant_ra_hours": 10.13, "radiant_dec_deg": 22.0,  "zhr": 15},
+    {"name": "Geminids",      "peak_month": 12, "peak_day": 14, "radiant_ra_hours": 7.47,  "radiant_dec_deg": 33.0,  "zhr": 150},
+    {"name": "Ursids",        "peak_month": 12, "peak_day": 22, "radiant_ra_hours": 14.47, "radiant_dec_deg": 76.0,  "zhr": 10}
+  ]
+}
