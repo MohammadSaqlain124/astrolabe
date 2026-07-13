@@ -32,3 +32,10 @@ class Event(Base):
             f"<Event {self.event_type} peak={self.peak_utc:%Y-%m-%d %H:%M} "
             f"alt={self.peak_altitude_deg:.0f}deg>"
         )
+
+class SentAlert(Base):
+    __tablename__ = "sent_alerts"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    alert_key: Mapped[str] = mapped_column(String(80), unique=True)
+    sent_at: Mapped[datetime] = mapped_column(default=_utcnow)

@@ -12,3 +12,4 @@ skyfield==1.54          # satellite propagation + sun/moon/twilight astronomy
 SQLAlchemy>=2.0.30,<3.0
 httpx
 apscheduler
+python-dotenv
