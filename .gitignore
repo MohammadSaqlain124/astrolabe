@@ -11,3 +11,4 @@ data/iss_tle.txt
 
 # secrets (for later phases)
 .env
+*.zip

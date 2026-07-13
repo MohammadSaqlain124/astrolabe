@@ -1,23 +1,30 @@
 from apscheduler.schedulers.blocking import BlockingScheduler
+from dotenv import load_dotenv
 
+from app.alerts.engine import check_and_send_alerts
+from app.alerts.notifier import EmailNotifier
 from app.ingestion.iss_ingest import ingest_iss_passes
 from app.ingestion.tle_fetch import fetch_tle
 
 LOCATION = (28.3670, 79.4304)  # Bareilly
 
 
-def refresh():
+def refresh_and_alert(notifier):
     fetch_tle()
     count = ingest_iss_passes(*LOCATION)
-    print(f"Refresh complete: {count} passes stored.")
+    sent = check_and_send_alerts(notifier, within_hours=24)
+    print(f"Refresh complete: {count} passes stored, {sent} alert(s) emailed.")
 
 
 def main():
-    refresh()
+    load_dotenv()
+    notifier = EmailNotifier()
+
+    refresh_and_alert(notifier)
 
     scheduler = BlockingScheduler(timezone="UTC")
-    scheduler.add_job(refresh, "interval", hours=2, id="iss_refresh")
-    print("Scheduler running. Refreshing every 2 hours. Press Ctrl+C to stop.")
+    scheduler.add_job(refresh_and_alert, "interval", hours=2, args=[notifier], id="iss_refresh")
+    print("Scheduler running: refresh + alerts every 2 hours. Press Ctrl+C to stop.")
     scheduler.start()
 
 
