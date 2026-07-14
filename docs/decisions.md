@@ -119,3 +119,54 @@ git-ignored `.env` file.
 email required no engine changes. Keeping secrets in `.env` (never committed) is the
 standard, safe way to handle credentials.
 
+---
+
+### D-011 — Multi-type event model: nullable columns + JSON details
+**Date:** 2026-07-13
+**Decision:** Hold ISS passes, meteor showers, and lunar eclipses in one `events`
+table. Make the ISS-only columns (`peak_altitude_deg`, `sun_altitude_deg`,
+`iss_sunlit`) nullable and add a `details` JSON column for each type's own data.
+**Why:** A single `event_type`-tagged table keeps queries and the alert engine
+uniform across event kinds, while `details` avoids a sprawl of type-specific columns.
+
+---
+
+### D-012 — Meteor showers from a curated dataset; eclipses computed natively
+**Date:** 2026-07-13
+**Decision:** Seed meteor showers from a curated JSON file (radiant, ZHR, peak date)
+and compute per-location visibility by sampling the peak night. Compute lunar eclipses
+directly with Skyfield's `eclipselib`.
+**Why:** No reliable free API exists for meteor showers, so known annual data is
+carried as a dataset; eclipses, by contrast, fall straight out of ephemeris geometry.
+
+---
+
+### D-013 — Web API: compute-on-demand, thin layer over a service function
+**Date:** 2026-07-14
+**Decision:** Expose a FastAPI app. `GET /events` computes events live for any
+lat/lon via `events_service.upcoming_events` without touching the database;
+`POST /subscribe` upserts a user. Request validation uses FastAPI/Pydantic.
+**Why:** Computing on demand makes the read API work for any location instantly.
+Keeping the logic in a service function (not the route) keeps the web layer thin and
+testable.
+
+---
+
+### D-014 — Multi-user alerting: per-subscriber ingestion and per-user dedup
+**Date:** 2026-07-14
+**Decision:** The scheduler ingests events for each unique subscriber location; the
+alert engine loops over active users, matches events at their coordinates, sends to
+their email, and keys de-duplication by `user{id}:...` so users are independent.
+Lead time varies by event type (1 day for ISS, 3 for showers/eclipses).
+**Why:** Turns the tool into a real multi-user service where each person gets alerts
+for their own location without one user's alert suppressing another's.
+
+---
+
+### D-015 — Configurable database URL for testability
+**Date:** 2026-07-14
+**Decision:** `database.py` reads `DATABASE_URL` from the environment (defaulting to
+the real SQLite file). Tests point it at a throwaway database via `conftest.py`.
+**Why:** Lets the automated test suite run against an isolated database without
+touching real data — configuration via environment is also the standard deployment
+pattern.

@@ -1,81 +1,103 @@
 # Astronomy Event Tracker with Personalized Alerts
 
-Predicts upcoming celestial events for a specific location, works out whether each is
-actually *visible* from there — accounting for the horizon, darkness, and (for the ISS)
-Earth's shadow — and emails personalized alerts ahead of visible events.
+A location-aware service that predicts upcoming celestial events — ISS passes, meteor
+showers, and lunar eclipses — works out whether each is genuinely *visible* from a
+given place, and emails subscribers before events they can actually see.
 
-The ISS-pass system is complete end to end: it pulls live orbital data, computes passes
-for your coordinates, decides which are genuinely watchable, stores them, and emails you
-before a visible pass — all on an automatic schedule.
+## What it does
 
-## How it works
+- **Computes events for any location:** ISS passes (from live orbital data), meteor
+  showers (radiant + Moon phase), and lunar eclipses (Moon above the horizon).
+- **Judges real visibility:** darkness, Earth's shadow, radiant altitude, Moon
+  interference — not just "an event happened somewhere."
+- **Serves a web API:** `GET /events` for any lat/lon, `POST /subscribe` to register.
+- **Emails subscribers automatically:** a scheduler refreshes data and sends
+  per-user, per-location alerts, de-duplicated, with a lead time suited to each event.
 
-Two pipelines meet at the database. A scheduled **ingestion** pipeline fetches fresh
-orbital data, computes passes, evaluates visibility, and stores the results. An **alert**
-pipeline reads upcoming visible passes and emails them, never sending a duplicate.
+## Architecture
 
 ```
 CelesTrak (orbital data) ─┐
-JPL ephemeris (Sun) ──────┤→ compute passes + visibility → SQLite → alert engine → email
-scheduler (every 2h) ─────┘
+JPL ephemeris (Sun/Moon) ─┤→ compute + visibility → SQLite → alert engine → email
+curated meteor dataset ───┘        ▲
+                                   │
+        FastAPI  ── GET /events (compute on demand) / POST /subscribe (users)
+        scheduler ── refresh every 2h, then alert every active subscriber
 ```
 
 ## Tech stack
 
-| Concern         | Choice                  | Notes |
-|-----------------|-------------------------|-------|
-| Astronomy       | Skyfield (+ DE421)      | SGP4 passes and Sun position, computed locally |
-| Database        | SQLite + SQLAlchemy 2.0 | typed ORM, single-file store |
-| Scheduling      | APScheduler             | runs the refresh + alert cycle |
-| Data fetch      | httpx                   | orbital-data download with caching |
-| Alerts          | smtplib + .env          | email via SMTP; secrets kept out of Git |
-| Web API (planned) | FastAPI               | Phase 3 |
+| Concern         | Choice                  |
+|-----------------|-------------------------|
+| Astronomy       | Skyfield (+ DE421 ephemeris) |
+| Web API         | FastAPI + Uvicorn       |
+| Database        | SQLite + SQLAlchemy 2.0 |
+| Scheduling      | APScheduler             |
+| Data fetch      | httpx                   |
+| Email           | smtplib + .env secrets  |
+| Tests           | pytest                  |
 
 ## Project structure
 
 ```
 astronomy-tracker/
 ├── app/
-│   ├── core/         # astronomy engine (passes + visibility) and database/models
-│   ├── ingestion/    # TLE fetcher, pass ingestion, scheduler
-│   └── alerts/       # notifiers (console, email) and the alert engine
-├── data/             # cached orbital data + ephemeris (git-ignored)
+│   ├── core/         # astronomy (iss, meteors, eclipses, sky), models, db, events_service
+│   ├── ingestion/    # TLE fetcher, per-type ingestion, scheduler
+│   ├── alerts/       # notifiers (console/email) + alert engine
+│   └── api/          # FastAPI app
+├── data/             # cached orbital data, ephemeris, meteor dataset (git-ignored where large)
 ├── docs/             # proposal, SRS, decision log
 ├── scripts/          # spike + inspection scripts
-└── tests/
+├── tests/            # pytest suite
+└── conftest.py       # test configuration (isolated DB)
 ```
 
 ## Setup
 
 ```bash
 python -m venv venv
-venv\Scripts\activate            # Windows  (source venv/bin/activate on macOS/Linux)
+venv\Scripts\activate                 # Windows (source venv/bin/activate elsewhere)
 pip install -r requirements.txt
 ```
 
-Create a `.env` in the project root for email alerts:
+Create a `.env` for email alerts:
 
 ```
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
 SMTP_USER=you@gmail.com
 SMTP_PASSWORD=your_gmail_app_password
-ALERT_TO=you@gmail.com
 ```
 
 ## Usage
 
 ```bash
-python init_db.py                       # create the database tables
-python -m app.ingestion.iss_ingest      # fetch + compute + store passes
-python -m scripts.show_passes           # list passes with visibility reasoning
-python -m app.ingestion.scheduler       # run the automatic refresh + alert loop
+python init_db.py                       # create database tables
+
+# Web API (interactive docs at http://127.0.0.1:8000/docs)
+uvicorn app.api.main:app --reload
+
+# Command-line inspection
+python -m scripts.show_events
+
+# Automatic refresh + per-subscriber alerts
+python -m app.ingestion.scheduler
+```
+
+## Tests
+
+```bash
+pip install -r requirements-dev.txt
+pytest
 ```
 
 ## Status / roadmap
 
-- [x] **Phase 0** — spike: compute an ISS pass for a location
-- [x] **Phase 1** — database, ingestion pipeline, live data fetch, scheduler
-- [x] **Phase 2** — visibility engine (Sun/darkness/shadow) + automated email alerts
-- [ ] **Phase 3a** — meteor showers and eclipses
-- [ ] **Phase 3b** — FastAPI web interface, multi-user locations
+- [x] ISS passes, meteor showers, lunar eclipses — with per-location visibility
+- [x] Email alerts for all event types (per-user, de-duplicated)
+- [x] FastAPI web API with subscriptions
+- [x] Automated test suite
+- [ ] Web frontend (location form + event list)
+- [ ] Deployment (hosted API + always-on scheduler)
+- [ ] Solar eclipses; PostgreSQL migration
