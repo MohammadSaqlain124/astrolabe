@@ -12,7 +12,7 @@ LOCATION = (28.3670, 79.4304)  # Bareilly
 def refresh_and_alert(notifier):
     fetch_tle()
     count = ingest_iss_passes(*LOCATION)
-    sent = check_and_send_alerts(notifier, within_hours=24)
+    sent = check_and_send_alerts(notifier)
     print(f"Refresh complete: {count} passes stored, {sent} alert(s) emailed.")
 
 
