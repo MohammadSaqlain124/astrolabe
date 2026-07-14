@@ -1,4 +1,7 @@
+from pathlib import Path
+
 from fastapi import FastAPI, Query
+from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, EmailStr, Field
 
 from app.core.database import SessionLocal
@@ -7,6 +10,8 @@ from app.core.models import User
 
 app = FastAPI(title="Astronomy Event Tracker", version="1.0")
 
+STATIC_DIR = Path(__file__).parent / "static"
+
 
 class Subscription(BaseModel):
     email: EmailStr
@@ -14,9 +19,9 @@ class Subscription(BaseModel):
     lon: float = Field(..., ge=-180, le=180)
 
 
-@app.get("/")
-def root():
-    return {"service": "Astronomy Event Tracker", "docs": "/docs"}
+@app.get("/", response_class=HTMLResponse)
+def index():
+    return (STATIC_DIR / "index.html").read_text(encoding="utf-8")
 
 
 @app.get("/events")

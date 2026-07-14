@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Observing log</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Serif:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0B1622; --panel:#13212E; --panel-2:#182C3C; --line:#24384A;
+    --star:#EAF0F4; --dim:#8298A8; --faint:#5A6E7E;
+    --amber:#E8A13C; --cyan:#56A8C4;
+    --sans:"IBM Plex Sans",system-ui,sans-serif;
+    --serif:"IBM Plex Serif",Georgia,serif;
+    --mono:"IBM Plex Mono",ui-monospace,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:var(--ink); color:var(--star); font-family:var(--sans);
+    font-size:16px; line-height:1.5; -webkit-font-smoothing:antialiased;
+    padding:0 20px;
+  }
+  .wrap{max-width:820px; margin:0 auto; padding:56px 0 96px}
+
+  /* ---- header ---- */
+  header{display:flex; align-items:baseline; justify-content:space-between; gap:20px; flex-wrap:wrap}
+  .mark{font-family:var(--serif); font-size:26px; font-weight:500; letter-spacing:.2px}
+  .mark .glyph{color:var(--amber); margin-right:8px}
+  .place{font-family:var(--mono); font-size:13px; color:var(--dim)}
+  .place b{color:var(--star); font-weight:500}
+
+  /* ---- controls ---- */
+  .controls{
+    display:flex; gap:14px 18px; flex-wrap:wrap; align-items:flex-end;
+    margin:28px 0 8px; padding-bottom:22px; border-bottom:1px solid var(--line);
+  }
+  .field{display:flex; flex-direction:column; gap:6px}
+  .field label{font-family:var(--mono); font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--faint)}
+  .field input{
+    font-family:var(--mono); font-size:15px; color:var(--star);
+    background:transparent; border:none; border-bottom:1px solid var(--line);
+    padding:5px 2px; width:110px;
+  }
+  .field input.days{width:56px}
+  .field input:focus{outline:none; border-bottom-color:var(--amber)}
+  button{font-family:var(--sans); font-size:14px; cursor:pointer; border-radius:2px}
+  .ghost{background:transparent; color:var(--star); border:1px solid var(--line); padding:7px 13px}
+  .ghost:hover{border-color:var(--amber); color:var(--amber)}
+  .primary{background:var(--amber); color:#1a1205; border:1px solid var(--amber); padding:8px 16px; font-weight:600}
+  .primary:hover{background:#f2b256}
+  :focus-visible{outline:2px solid var(--amber); outline-offset:2px}
+
+  /* ---- context line ---- */
+  .context{font-family:var(--mono); font-size:12.5px; color:var(--dim); margin:20px 0 6px}
+  .context .warn{color:var(--amber)}
+
+  /* ---- event entries ---- */
+  .entry{
+    display:grid; grid-template-columns:22px 1fr auto; gap:16px; align-items:center;
+    padding:16px 4px; border-bottom:1px solid var(--line);
+  }
+  .entry:hover{background:var(--panel)}
+  .mag{font-size:15px; line-height:1; text-align:center}
+  .mag.on{color:var(--amber)}
+  .mag.off{color:var(--faint)}
+  .when{font-family:var(--mono); font-size:13px; color:var(--dim); letter-spacing:.02em}
+  .when b{color:var(--star); font-weight:500}
+  .name{font-size:16px; font-weight:500; margin:2px 0 3px}
+  .meta{font-family:var(--mono); font-size:12px; color:var(--dim)}
+  .arc{width:104px; height:54px; flex:none}
+  .arc svg{display:block}
+
+  .msg{font-family:var(--mono); font-size:13px; color:var(--dim); padding:26px 4px}
+
+  /* ---- subscribe ---- */
+  .subscribe{margin-top:40px; padding-top:26px; border-top:1px solid var(--line)}
+  .subscribe h2{font-family:var(--serif); font-weight:500; font-size:18px; margin:0 0 4px}
+  .subscribe p{color:var(--dim); font-size:14px; margin:0 0 16px}
+  .subrow{display:flex; gap:12px; flex-wrap:wrap; align-items:center}
+  .subrow input{
+    font-family:var(--mono); font-size:15px; color:var(--star);
+    background:var(--panel); border:1px solid var(--line); border-radius:2px;
+    padding:9px 12px; min-width:260px; flex:1;
+  }
+  .subrow input:focus{outline:none; border-color:var(--amber)}
+  .substatus{font-family:var(--mono); font-size:13px; margin-top:12px; min-height:18px}
+  .substatus.ok{color:var(--cyan)}
+  .substatus.err{color:var(--amber)}
+
+  @media (max-width:560px){
+    .wrap{padding:36px 0 72px}
+    .entry{grid-template-columns:22px 1fr; grid-template-areas:"mag body" "arc arc"}
+    .entry .mag{grid-area:mag} .entry .body{grid-area:body} .entry .arc{grid-area:arc; margin-left:38px}
+  }
+  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="mark"><span class="glyph">&#10038;</span>Observing log</div>
+    <div class="place" id="place">&mdash;</div>
+  </header>
+
+  <div class="controls">
+    <div class="field">
+      <label for="lat">Latitude</label>
+      <input id="lat" type="number" step="0.01" value="28.36" inputmode="decimal">
+    </div>
+    <div class="field">
+      <label for="lon">Longitude</label>
+      <input id="lon" type="number" step="0.01" value="79.43" inputmode="decimal">
+    </div>
+    <div class="field">
+      <label for="days">Nights</label>
+      <input id="days" class="days" type="number" min="1" max="30" value="7">
+    </div>
+    <button class="ghost" id="locate" type="button">Use my location</button>
+    <button class="primary" id="show" type="button">Show events</button>
+  </div>
+
+  <div class="context" id="context"></div>
+  <div id="events"></div>
+
+  <section class="subscribe">
+    <h2>Get alerts for this spot</h2>
+    <p>One email before an event you can actually see from here &mdash; no digests, no noise.</p>
+    <div class="subrow">
+      <input id="email" type="email" placeholder="you@example.com" autocomplete="email">
+      <button class="primary" id="subscribe" type="button">Subscribe</button>
+    </div>
+    <div class="substatus" id="substatus"></div>
+  </section>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+
+const SAMPLE = [
+  {type:"iss_pass", name:"ISS pass", peak_utc:"2026-07-15T02:35:00+00:00", visible:true,
+   details:{peak_altitude_deg:87, sun_altitude_deg:-14, iss_sunlit:true}},
+  {type:"meteor_shower", name:"Perseids", peak_utc:"2026-08-12T23:15:00+00:00", visible:true,
+   details:{zhr:100, radiant_altitude_deg:58, moon_illumination_pct:0}},
+  {type:"lunar_eclipse", name:"Total lunar eclipse", peak_utc:"2028-12-31T22:22:00+00:00", visible:true,
+   details:{moon_altitude_deg:64}},
+  {type:"iss_pass", name:"ISS pass", peak_utc:"2026-07-16T13:11:00+00:00", visible:false,
+   details:{peak_altitude_deg:24, sun_altitude_deg:35, iss_sunlit:true}},
+];
+
+function coordText(lat, lon){
+  const ns = lat >= 0 ? "N" : "S", ew = lon >= 0 ? "E" : "W";
+  return `${Math.abs(lat).toFixed(2)}\u00B0${ns} ${Math.abs(lon).toFixed(2)}\u00B0${ew}`;
+}
+
+function fmt(iso){
+  const dt = new Date(iso);
+  return {
+    date: dt.toLocaleDateString(undefined, {weekday:"short", day:"2-digit", month:"short"}),
+    time: dt.toLocaleTimeString(undefined, {hour:"2-digit", minute:"2-digit", hour12:false}),
+  };
+}
+
+function altFor(ev){
+  const d = ev.details || {};
+  if(ev.type === "iss_pass") return d.peak_altitude_deg ?? 0;
+  if(ev.type === "meteor_shower") return d.radiant_altitude_deg ?? 0;
+  if(ev.type === "lunar_eclipse") return d.moon_altitude_deg ?? 0;
+  return 0;
+}
+
+function metaFor(ev){
+  const d = ev.details || {};
+  if(ev.type === "iss_pass")
+    return `${d.iss_sunlit ? "sunlit \u00B7 " : "in shadow \u00B7 "}peak ${Math.round(d.peak_altitude_deg)}\u00B0 \u00B7 ${ev.visible ? "visible" : "not visible now"}`;
+  if(ev.type === "meteor_shower")
+    return `ZHR ${d.zhr} \u00B7 radiant ${Math.round(d.radiant_altitude_deg)}\u00B0 \u00B7 moon ${Math.round(d.moon_illumination_pct)}% lit`;
+  if(ev.type === "lunar_eclipse")
+    return `moon ${Math.round(d.moon_altitude_deg)}\u00B0 at greatest eclipse`;
+  return "";
+}
+
+function skyArc(alt, visible){
+  const W=104, H=54, base=42, top=8, x0=10, x1=W-10, mid=W/2;
+  const col = visible ? "var(--amber)" : "var(--dim)";
+  const horizon = `<line x1="${x0}" y1="${base}" x2="${x1}" y2="${base}" stroke="var(--line)" stroke-width="1"/>`;
+  if(alt <= 0){
+    return `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" aria-hidden="true">${horizon}
+      <circle cx="${mid}" cy="${base+6}" r="3" fill="none" stroke="var(--faint)" stroke-width="1.25"/></svg>`;
+  }
+  const a = Math.min(90, alt);
+  const apexY = base - (a/90)*(base-top);
+  const cpY = 2*apexY - base;
+  return `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" aria-hidden="true">${horizon}
+    <path d="M${x0} ${base} Q${mid} ${cpY} ${x1} ${base}" fill="none" stroke="${col}" stroke-width="1.25" opacity="${visible?1:0.65}"/>
+    <circle cx="${mid}" cy="${apexY}" r="3" fill="${visible?"var(--amber)":"none"}" stroke="${col}" stroke-width="1.25"/></svg>`;
+}
+
+function render(events){
+  const box = $("events");
+  if(!events.length){ box.innerHTML = `<div class="msg">No upcoming events for this location.</div>`; return; }
+  box.innerHTML = events.map(ev => {
+    const {date, time} = fmt(ev.peak_utc);
+    const dot = ev.visible ? `<span class="mag on">&#9733;</span>` : `<span class="mag off">&#9734;</span>`;
+    return `<div class="entry">
+      ${dot}
+      <div class="body">
+        <div class="when"><b>${date}</b> &middot; ${time}</div>
+        <div class="name">${ev.name}</div>
+        <div class="meta">${metaFor(ev)}</div>
+      </div>
+      <div class="arc">${skyArc(altFor(ev), ev.visible)}</div>
+    </div>`;
+  }).join("");
+}
+
+async function load(){
+  const lat = parseFloat($("lat").value), lon = parseFloat($("lon").value);
+  const days = parseInt($("days").value, 10) || 7;
+  $("place").innerHTML = `your sky &middot; <b>${coordText(lat, lon)}</b>`;
+  $("context").textContent = "loading\u2026";
+  try{
+    const r = await fetch(`/events?lat=${lat}&lon=${lon}&days=${days}`);
+    if(!r.ok) throw new Error("bad response");
+    const data = await r.json();
+    const visible = data.events.filter(e => e.visible).length;
+    $("context").textContent = `next ${days} nights \u00B7 ${data.count} events \u00B7 ${visible} visible from here`;
+    render(data.events);
+  }catch(e){
+    $("context").innerHTML = `<span class="warn">showing sample events</span> \u00B7 start the server to see your live sky`;
+    render(SAMPLE);
+  }
+}
+
+async function subscribe(){
+  const email = $("email").value.trim();
+  const lat = parseFloat($("lat").value), lon = parseFloat($("lon").value);
+  const status = $("substatus");
+  if(!email){ status.className = "substatus err"; status.textContent = "enter an email first"; return; }
+  status.className = "substatus"; status.textContent = "subscribing\u2026";
+  try{
+    const r = await fetch("/subscribe", {
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({email, lat, lon}),
+    });
+    if(r.status === 422){ status.className = "substatus err"; status.textContent = "check the email address"; return; }
+    if(!r.ok) throw new Error();
+    status.className = "substatus ok";
+    status.textContent = `done \u2014 you'll get alerts for ${coordText(lat, lon)}`;
+  }catch(e){
+    status.className = "substatus err"; status.textContent = "couldn't reach the server";
+  }
+}
+
+$("show").addEventListener("click", load);
+$("subscribe").addEventListener("click", subscribe);
+$("locate").addEventListener("click", () => {
+  if(!navigator.geolocation){ return; }
+  $("locate").textContent = "locating\u2026";
+  navigator.geolocation.getCurrentPosition(
+    (pos) => { $("lat").value = pos.coords.latitude.toFixed(2); $("lon").value = pos.coords.longitude.toFixed(2); $("locate").textContent = "Use my location"; load(); },
+    () => { $("locate").textContent = "Use my location"; }
+  );
+});
+
+load();
+</script>
+</body>
+</html>
