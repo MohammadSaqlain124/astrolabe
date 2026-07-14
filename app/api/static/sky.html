@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sky map</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Serif:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0B1622; --line:#24384A; --star:#EAF0F4; --dim:#8298A8; --faint:#5A6E7E;
+    --amber:#E8A13C;
+    --sans:"IBM Plex Sans",system-ui,sans-serif;
+    --serif:"IBM Plex Serif",Georgia,serif;
+    --mono:"IBM Plex Mono",ui-monospace,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{background:#05080f; color:var(--star); font-family:var(--sans); min-height:100vh; padding:0 20px}
+  .wrap{max-width:1000px; margin:36px auto 60px}
+  header{display:flex; align-items:baseline; justify-content:space-between; gap:20px; flex-wrap:wrap; margin-bottom:22px}
+  .mark{font-family:var(--serif); font-size:24px; font-weight:500}
+  .mark .glyph{color:var(--amber); margin-right:8px}
+  .place{font-family:var(--mono); font-size:13px; color:var(--dim)}
+  .place b{color:var(--star); font-weight:500}
+  a.back{font-family:var(--sans); font-size:14px; color:var(--star); text-decoration:none; border:1px solid var(--line); border-radius:2px; padding:7px 13px}
+  a.back:hover{border-color:var(--amber); color:var(--amber)}
+  .bar{display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-bottom:16px}
+  button{font-family:var(--sans); font-size:14px; cursor:pointer; border-radius:2px; background:transparent; color:var(--star); border:1px solid var(--line); padding:7px 13px}
+  button:hover{border-color:var(--amber); color:var(--amber)}
+  :focus-visible{outline:2px solid var(--amber); outline-offset:2px}
+  #starmap{width:100%; height:70vh; min-height:460px; border:1px solid var(--line); border-radius:5px; overflow:hidden; background:#05080f}
+  .hint{font-family:var(--mono); font-size:12px; color:var(--faint); margin-top:12px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="mark"><span class="glyph">&#10038;</span>Sky map</div>
+    <div class="place" id="place">&mdash;</div>
+    <a class="back" href="/">&larr; Back to log</a>
+  </header>
+
+  <div class="bar">
+    <button id="locate" type="button">Use my location</button>
+  </div>
+
+  <div id="starmap"></div>
+  <div class="hint">Drag to look around &middot; scroll to zoom &middot; the sky updates live for your location and the current time.</div>
+</div>
+
+<script src="https://slowe.github.io/VirtualSky/virtualsky.min.js"></script>
+<script>
+  const params = new URLSearchParams(location.search);
+  const lat = parseFloat(params.get("lat"));
+  const lon = parseFloat(params.get("lon"));
+  const LAT = Number.isFinite(lat) ? lat : 28.36;
+  const LON = Number.isFinite(lon) ? lon : 79.43;
+
+  function coordText(la, lo){
+    const ns = la >= 0 ? "N" : "S", ew = lo >= 0 ? "E" : "W";
+    return `${Math.abs(la).toFixed(2)}\u00B0${ns} ${Math.abs(lo).toFixed(2)}\u00B0${ew}`;
+  }
+  document.getElementById("place").innerHTML = `your sky &middot; <b>${coordText(LAT, LON)}</b>`;
+
+  document.getElementById("locate").addEventListener("click", () => {
+    if(!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition((pos) => {
+      location.href = `/sky?lat=${pos.coords.latitude.toFixed(2)}&lon=${pos.coords.longitude.toFixed(2)}`;
+    });
+  });
+
+  S.virtualsky({
+    id: "starmap",
+    projection: "stereo",
+    latitude: LAT,
+    longitude: LON,
+    constellations: true,
+    constellationlabels: true,
+    showstars: true,
+    showstarlabels: false,
+    showplanets: true,
+    showplanetlabels: true,
+    cardinalpoints: true,
+    ground: true,
+    gradient: true,
+    keyboard: true,
+    mouse: true,
+    live: true,
+    magnitude: 5
+  });
+</script>
+</body>
+</html>

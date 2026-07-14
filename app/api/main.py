@@ -24,6 +24,11 @@ def index():
     return (STATIC_DIR / "index.html").read_text(encoding="utf-8")
 
 
+@app.get("/sky", response_class=HTMLResponse)
+def sky():
+    return (STATIC_DIR / "sky.html").read_text(encoding="utf-8")
+
+
 @app.get("/events")
 def get_events(
     lat: float = Query(..., ge=-90, le=90, description="Latitude in degrees"),
