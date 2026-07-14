@@ -5,7 +5,7 @@ services:
     plan: free
     region: singapore
     buildCommand: "pip install -r requirements.txt && python -c 'import app.core.sky'"
-    startCommand: "uvicorn app.api.main:app --host 0.0.0.0 --port $PORT"
+    startCommand: "python init_db.py && uvicorn app.api.main:app --host 0.0.0.0 --port $PORT"
     envVars:
       - key: PYTHON_VERSION
         value: "3.12.7"
