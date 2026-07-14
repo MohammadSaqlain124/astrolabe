@@ -9,7 +9,7 @@
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Serif:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root{
-    --ink:#0B1622; --panel:#13212E; --panel-2:#182C3C; --line:#24384A;
+    --ink:#0B1622; --panel:#13212E; --line:#24384A;
     --star:#EAF0F4; --dim:#8298A8; --faint:#5A6E7E;
     --amber:#E8A13C; --cyan:#56A8C4;
     --sans:"IBM Plex Sans",system-ui,sans-serif;
@@ -21,18 +21,20 @@
   body{
     background:var(--ink); color:var(--star); font-family:var(--sans);
     font-size:16px; line-height:1.5; -webkit-font-smoothing:antialiased;
-    padding:0 20px;
+    min-height:100vh; padding:0 20px;
   }
-  .wrap{max-width:820px; margin:0 auto; padding:56px 0 96px}
-
-  /* ---- header ---- */
+  #skybg{position:fixed; inset:0; z-index:-2; background:#0B1622; transition:background 2.5s linear}
+  #stars{position:fixed; inset:0; z-index:-1; pointer-events:none; opacity:0; transition:opacity 2.5s linear}
+  .wrap{
+    max-width:820px; margin:40px auto; padding:44px 40px 80px; position:relative;
+    background:rgba(9,17,26,0.80); border:1px solid var(--line); border-radius:5px;
+  }
   header{display:flex; align-items:baseline; justify-content:space-between; gap:20px; flex-wrap:wrap}
   .mark{font-family:var(--serif); font-size:26px; font-weight:500; letter-spacing:.2px}
   .mark .glyph{color:var(--amber); margin-right:8px}
   .place{font-family:var(--mono); font-size:13px; color:var(--dim)}
   .place b{color:var(--star); font-weight:500}
-
-  /* ---- controls ---- */
+  .place .sky{color:var(--amber)}
   .controls{
     display:flex; gap:14px 18px; flex-wrap:wrap; align-items:flex-end;
     margin:28px 0 8px; padding-bottom:22px; border-bottom:1px solid var(--line);
@@ -52,17 +54,13 @@
   .primary{background:var(--amber); color:#1a1205; border:1px solid var(--amber); padding:8px 16px; font-weight:600}
   .primary:hover{background:#f2b256}
   :focus-visible{outline:2px solid var(--amber); outline-offset:2px}
-
-  /* ---- context line ---- */
   .context{font-family:var(--mono); font-size:12.5px; color:var(--dim); margin:20px 0 6px}
   .context .warn{color:var(--amber)}
-
-  /* ---- event entries ---- */
   .entry{
     display:grid; grid-template-columns:22px 1fr auto; gap:16px; align-items:center;
     padding:16px 4px; border-bottom:1px solid var(--line);
   }
-  .entry:hover{background:var(--panel)}
+  .entry:hover{background:rgba(19,33,46,0.6)}
   .mag{font-size:15px; line-height:1; text-align:center}
   .mag.on{color:var(--amber)}
   .mag.off{color:var(--faint)}
@@ -72,26 +70,22 @@
   .meta{font-family:var(--mono); font-size:12px; color:var(--dim)}
   .arc{width:104px; height:54px; flex:none}
   .arc svg{display:block}
-
   .msg{font-family:var(--mono); font-size:13px; color:var(--dim); padding:26px 4px}
-
-  /* ---- subscribe ---- */
   .subscribe{margin-top:40px; padding-top:26px; border-top:1px solid var(--line)}
   .subscribe h2{font-family:var(--serif); font-weight:500; font-size:18px; margin:0 0 4px}
   .subscribe p{color:var(--dim); font-size:14px; margin:0 0 16px}
   .subrow{display:flex; gap:12px; flex-wrap:wrap; align-items:center}
   .subrow input{
     font-family:var(--mono); font-size:15px; color:var(--star);
-    background:var(--panel); border:1px solid var(--line); border-radius:2px;
+    background:rgba(19,33,46,0.7); border:1px solid var(--line); border-radius:2px;
     padding:9px 12px; min-width:260px; flex:1;
   }
   .subrow input:focus{outline:none; border-color:var(--amber)}
   .substatus{font-family:var(--mono); font-size:13px; margin-top:12px; min-height:18px}
   .substatus.ok{color:var(--cyan)}
   .substatus.err{color:var(--amber)}
-
   @media (max-width:560px){
-    .wrap{padding:36px 0 72px}
+    .wrap{padding:32px 20px 64px; margin:20px auto}
     .entry{grid-template-columns:22px 1fr; grid-template-areas:"mag body" "arc arc"}
     .entry .mag{grid-area:mag} .entry .body{grid-area:body} .entry .arc{grid-area:arc; margin-left:38px}
   }
@@ -99,32 +93,25 @@
 </style>
 </head>
 <body>
+<div id="skybg"></div>
+<canvas id="stars"></canvas>
 <div class="wrap">
   <header>
     <div class="mark"><span class="glyph">&#10038;</span>Observing log</div>
     <div class="place" id="place">&mdash;</div>
   </header>
-
   <div class="controls">
-    <div class="field">
-      <label for="lat">Latitude</label>
-      <input id="lat" type="number" step="0.01" value="28.36" inputmode="decimal">
-    </div>
-    <div class="field">
-      <label for="lon">Longitude</label>
-      <input id="lon" type="number" step="0.01" value="79.43" inputmode="decimal">
-    </div>
-    <div class="field">
-      <label for="days">Nights</label>
-      <input id="days" class="days" type="number" min="1" max="30" value="7">
-    </div>
+    <div class="field"><label for="lat">Latitude</label>
+      <input id="lat" type="number" step="0.01" value="28.36" inputmode="decimal"></div>
+    <div class="field"><label for="lon">Longitude</label>
+      <input id="lon" type="number" step="0.01" value="79.43" inputmode="decimal"></div>
+    <div class="field"><label for="days">Nights</label>
+      <input id="days" class="days" type="number" min="1" max="30" value="7"></div>
     <button class="ghost" id="locate" type="button">Use my location</button>
     <button class="primary" id="show" type="button">Show events</button>
   </div>
-
   <div class="context" id="context"></div>
   <div id="events"></div>
-
   <section class="subscribe">
     <h2>Get alerts for this spot</h2>
     <p>One email before an event you can actually see from here &mdash; no digests, no noise.</p>
@@ -135,34 +122,78 @@
     <div class="substatus" id="substatus"></div>
   </section>
 </div>
-
 <script>
 const $ = (id) => document.getElementById(id);
 
-const SAMPLE = [
-  {type:"iss_pass", name:"ISS pass", peak_utc:"2026-07-15T02:35:00+00:00", visible:true,
-   details:{peak_altitude_deg:87, sun_altitude_deg:-14, iss_sunlit:true}},
-  {type:"meteor_shower", name:"Perseids", peak_utc:"2026-08-12T23:15:00+00:00", visible:true,
-   details:{zhr:100, radiant_altitude_deg:58, moon_illumination_pct:0}},
-  {type:"lunar_eclipse", name:"Total lunar eclipse", peak_utc:"2028-12-31T22:22:00+00:00", visible:true,
-   details:{moon_altitude_deg:64}},
-  {type:"iss_pass", name:"ISS pass", peak_utc:"2026-07-16T13:11:00+00:00", visible:false,
-   details:{peak_altitude_deg:24, sun_altitude_deg:35, iss_sunlit:true}},
+function sunAltitude(lat, lon, date){
+  const rad = Math.PI/180, dayMs = 86400000, J1970 = 2440588, J2000 = 2451545;
+  const d = date.valueOf()/dayMs - 0.5 + J1970 - J2000;
+  const M = rad*(357.5291 + 0.98560028*d);
+  const C = rad*(1.9148*Math.sin(M) + 0.02*Math.sin(2*M) + 0.0003*Math.sin(3*M));
+  const L = M + C + rad*102.9372 + Math.PI;
+  const e = rad*23.4397;
+  const dec = Math.asin(Math.sin(L)*Math.sin(e));
+  const ra = Math.atan2(Math.sin(L)*Math.cos(e), Math.cos(L));
+  const th = rad*(280.16 + 360.9856235*d) - rad*(-lon);
+  const H = th - ra, phi = rad*lat;
+  return Math.asin(Math.sin(phi)*Math.sin(dec) + Math.cos(phi)*Math.cos(dec)*Math.cos(H)) / rad;
+}
+const SKY = [
+  {a:90,  top:[74,134,198], bot:[171,205,234]},
+  {a:8,   top:[86,140,196], bot:[198,219,238]},
+  {a:1,   top:[70,112,168], bot:[232,171,112]},
+  {a:-4,  top:[40,56,96],   bot:[188,108,90]},
+  {a:-9,  top:[24,34,64],   bot:[70,60,90]},
+  {a:-15, top:[15,23,46],   bot:[26,32,56]},
+  {a:-90, top:[6,10,22],    bot:[9,14,26]},
 ];
-
+const lerp = (a,b,t) => a + (b-a)*t;
+const clamp = (v,lo,hi) => Math.max(lo, Math.min(hi, v));
+function skyColors(alt){
+  alt = clamp(alt, -90, 90);
+  let hi = SKY[0], lo = SKY[SKY.length-1];
+  for(let i=0; i<SKY.length-1; i++){
+    if(alt <= SKY[i].a && alt >= SKY[i+1].a){ hi = SKY[i]; lo = SKY[i+1]; break; }
+  }
+  const t = hi.a === lo.a ? 0 : (hi.a - alt) / (hi.a - lo.a);
+  const mix = (c1,c2) => `rgb(${Math.round(lerp(c1[0],c2[0],t))},${Math.round(lerp(c1[1],c2[1],t))},${Math.round(lerp(c1[2],c2[2],t))})`;
+  return [mix(hi.top, lo.top), mix(hi.bot, lo.bot)];
+}
+function drawStars(){
+  const c = $("stars"), ctx = c.getContext("2d");
+  c.width = window.innerWidth; c.height = window.innerHeight;
+  ctx.clearRect(0,0,c.width,c.height);
+  const n = Math.round(c.width * c.height / 9000);
+  for(let i=0; i<n; i++){
+    const x = Math.random()*c.width, y = Math.random()*c.height;
+    const r = Math.random()*0.9 + 0.3, a = Math.random()*0.6 + 0.35;
+    ctx.beginPath(); ctx.arc(x, y, r, 0, 6.283);
+    ctx.fillStyle = `rgba(233,240,246,${a})`; ctx.fill();
+  }
+}
+function updateSky(){
+  const lat = parseFloat($("lat").value) || 0, lon = parseFloat($("lon").value) || 0;
+  const alt = sunAltitude(lat, lon, new Date());
+  const [top, bot] = skyColors(alt);
+  $("skybg").style.background = `linear-gradient(180deg, ${top} 0%, ${bot} 100%)`;
+  $("stars").style.opacity = clamp((-6 - alt) / 12, 0, 1);
+  const label = alt > 6 ? "daylight" : alt > -6 ? "twilight" : "night";
+  $("place").innerHTML = `<span class="sky">${label}</span> &middot; <b>${coordText(lat, lon)}</b>`;
+}
+const SAMPLE = [
+  {type:"iss_pass", name:"ISS pass", peak_utc:"2026-07-15T02:35:00+00:00", visible:true, details:{peak_altitude_deg:87, iss_sunlit:true}},
+  {type:"meteor_shower", name:"Perseids", peak_utc:"2026-08-12T23:15:00+00:00", visible:true, details:{zhr:100, radiant_altitude_deg:58, moon_illumination_pct:0}},
+  {type:"lunar_eclipse", name:"Total lunar eclipse", peak_utc:"2028-12-31T22:22:00+00:00", visible:true, details:{moon_altitude_deg:64}},
+];
 function coordText(lat, lon){
   const ns = lat >= 0 ? "N" : "S", ew = lon >= 0 ? "E" : "W";
   return `${Math.abs(lat).toFixed(2)}\u00B0${ns} ${Math.abs(lon).toFixed(2)}\u00B0${ew}`;
 }
-
 function fmt(iso){
   const dt = new Date(iso);
-  return {
-    date: dt.toLocaleDateString(undefined, {weekday:"short", day:"2-digit", month:"short"}),
-    time: dt.toLocaleTimeString(undefined, {hour:"2-digit", minute:"2-digit", hour12:false}),
-  };
+  return { date: dt.toLocaleDateString(undefined, {weekday:"short", day:"2-digit", month:"short"}),
+           time: dt.toLocaleTimeString(undefined, {hour:"2-digit", minute:"2-digit", hour12:false}) };
 }
-
 function altFor(ev){
   const d = ev.details || {};
   if(ev.type === "iss_pass") return d.peak_altitude_deg ?? 0;
@@ -170,7 +201,6 @@ function altFor(ev){
   if(ev.type === "lunar_eclipse") return d.moon_altitude_deg ?? 0;
   return 0;
 }
-
 function metaFor(ev){
   const d = ev.details || {};
   if(ev.type === "iss_pass")
@@ -181,45 +211,29 @@ function metaFor(ev){
     return `moon ${Math.round(d.moon_altitude_deg)}\u00B0 at greatest eclipse`;
   return "";
 }
-
 function skyArc(alt, visible){
   const W=104, H=54, base=42, top=8, x0=10, x1=W-10, mid=W/2;
   const col = visible ? "var(--amber)" : "var(--dim)";
   const horizon = `<line x1="${x0}" y1="${base}" x2="${x1}" y2="${base}" stroke="var(--line)" stroke-width="1"/>`;
   if(alt <= 0){
-    return `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" aria-hidden="true">${horizon}
-      <circle cx="${mid}" cy="${base+6}" r="3" fill="none" stroke="var(--faint)" stroke-width="1.25"/></svg>`;
+    return `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" aria-hidden="true">${horizon}<circle cx="${mid}" cy="${base+6}" r="3" fill="none" stroke="var(--faint)" stroke-width="1.25"/></svg>`;
   }
-  const a = Math.min(90, alt);
-  const apexY = base - (a/90)*(base-top);
-  const cpY = 2*apexY - base;
-  return `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" aria-hidden="true">${horizon}
-    <path d="M${x0} ${base} Q${mid} ${cpY} ${x1} ${base}" fill="none" stroke="${col}" stroke-width="1.25" opacity="${visible?1:0.65}"/>
-    <circle cx="${mid}" cy="${apexY}" r="3" fill="${visible?"var(--amber)":"none"}" stroke="${col}" stroke-width="1.25"/></svg>`;
+  const a = Math.min(90, alt), apexY = base - (a/90)*(base-top), cpY = 2*apexY - base;
+  return `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" aria-hidden="true">${horizon}<path d="M${x0} ${base} Q${mid} ${cpY} ${x1} ${base}" fill="none" stroke="${col}" stroke-width="1.25" opacity="${visible?1:0.65}"/><circle cx="${mid}" cy="${apexY}" r="3" fill="${visible?"var(--amber)":"none"}" stroke="${col}" stroke-width="1.25"/></svg>`;
 }
-
 function render(events){
   const box = $("events");
   if(!events.length){ box.innerHTML = `<div class="msg">No upcoming events for this location.</div>`; return; }
   box.innerHTML = events.map(ev => {
     const {date, time} = fmt(ev.peak_utc);
     const dot = ev.visible ? `<span class="mag on">&#9733;</span>` : `<span class="mag off">&#9734;</span>`;
-    return `<div class="entry">
-      ${dot}
-      <div class="body">
-        <div class="when"><b>${date}</b> &middot; ${time}</div>
-        <div class="name">${ev.name}</div>
-        <div class="meta">${metaFor(ev)}</div>
-      </div>
-      <div class="arc">${skyArc(altFor(ev), ev.visible)}</div>
-    </div>`;
+    return `<div class="entry">${dot}<div class="body"><div class="when"><b>${date}</b> &middot; ${time}</div><div class="name">${ev.name}</div><div class="meta">${metaFor(ev)}</div></div><div class="arc">${skyArc(altFor(ev), ev.visible)}</div></div>`;
   }).join("");
 }
-
 async function load(){
+  updateSky();
   const lat = parseFloat($("lat").value), lon = parseFloat($("lon").value);
   const days = parseInt($("days").value, 10) || 7;
-  $("place").innerHTML = `your sky &middot; <b>${coordText(lat, lon)}</b>`;
   $("context").textContent = "loading\u2026";
   try{
     const r = await fetch(`/events?lat=${lat}&lon=${lon}&days=${days}`);
@@ -233,7 +247,6 @@ async function load(){
     render(SAMPLE);
   }
 }
-
 async function subscribe(){
   const email = $("email").value.trim();
   const lat = parseFloat($("lat").value), lon = parseFloat($("lon").value);
@@ -241,31 +254,27 @@ async function subscribe(){
   if(!email){ status.className = "substatus err"; status.textContent = "enter an email first"; return; }
   status.className = "substatus"; status.textContent = "subscribing\u2026";
   try{
-    const r = await fetch("/subscribe", {
-      method:"POST", headers:{"Content-Type":"application/json"},
-      body: JSON.stringify({email, lat, lon}),
-    });
+    const r = await fetch("/subscribe", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({email, lat, lon}) });
     if(r.status === 422){ status.className = "substatus err"; status.textContent = "check the email address"; return; }
     if(!r.ok) throw new Error();
     status.className = "substatus ok";
     status.textContent = `done \u2014 you'll get alerts for ${coordText(lat, lon)}`;
-  }catch(e){
-    status.className = "substatus err"; status.textContent = "couldn't reach the server";
-  }
+  }catch(e){ status.className = "substatus err"; status.textContent = "couldn't reach the server"; }
 }
-
 $("show").addEventListener("click", load);
 $("subscribe").addEventListener("click", subscribe);
 $("locate").addEventListener("click", () => {
-  if(!navigator.geolocation){ return; }
+  if(!navigator.geolocation) return;
   $("locate").textContent = "locating\u2026";
   navigator.geolocation.getCurrentPosition(
     (pos) => { $("lat").value = pos.coords.latitude.toFixed(2); $("lon").value = pos.coords.longitude.toFixed(2); $("locate").textContent = "Use my location"; load(); },
     () => { $("locate").textContent = "Use my location"; }
   );
 });
-
+window.addEventListener("resize", drawStars);
+drawStars();
 load();
+setInterval(updateSky, 60000);
 </script>
 </body>
 </html>
