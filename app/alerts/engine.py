@@ -1,20 +1,19 @@
 from datetime import datetime, timedelta, timezone
 
 from app.core.database import SessionLocal
-from app.core.models import Event, SentAlert
+from app.core.models import Event, SentAlert, User
 
 IST = timezone(timedelta(hours=5, minutes=30))
 
-# how many days ahead to alert, per event type
 LEAD_DAYS = {
-    "iss_pass": 1,        # a same-day heads-up
-    "meteor_shower": 3,   # a few days to plan around
+    "iss_pass": 1,
+    "meteor_shower": 3,
     "lunar_eclipse": 3,
 }
 
 
-def _alert_key(event: Event) -> str:
-    return f"{event.event_type}@{event.peak_utc:%Y-%m-%dT%H:%M}"
+def _alert_key(user_id: int, event: Event) -> str:
+    return f"user{user_id}:{event.event_type}@{event.peak_utc:%Y-%m-%dT%H:%M}"
 
 
 def _format_alert(event: Event) -> tuple[str, str]:
@@ -61,24 +60,32 @@ def check_and_send_alerts(notifier) -> int:
 
     sent = 0
     with SessionLocal() as session:
-        upcoming = (
-            session.query(Event)
-            .filter(Event.visible.is_(True), Event.peak_utc > now)
-            .order_by(Event.peak_utc)
-            .all()
-        )
+        users = session.query(User).filter(User.active.is_(True)).all()
 
-        for event in upcoming:
-            lead = LEAD_DAYS.get(event.event_type, 1)
-            if event.peak_utc > now + timedelta(days=lead):
-                continue  # still too far out to alert
-            key = _alert_key(event)
-            if session.query(SentAlert).filter(SentAlert.alert_key == key).first():
-                continue
-            subject, body = _format_alert(event)
-            notifier.send(subject, body)
-            session.add(SentAlert(alert_key=key))
-            sent += 1
+        for user in users:
+            upcoming = (
+                session.query(Event)
+                .filter(
+                    Event.visible.is_(True),
+                    Event.peak_utc > now,
+                    Event.latitude == user.latitude,
+                    Event.longitude == user.longitude,
+                )
+                .order_by(Event.peak_utc)
+                .all()
+            )
+
+            for event in upcoming:
+                lead = LEAD_DAYS.get(event.event_type, 1)
+                if event.peak_utc > now + timedelta(days=lead):
+                    continue
+                key = _alert_key(user.id, event)
+                if session.query(SentAlert).filter(SentAlert.alert_key == key).first():
+                    continue
+                subject, body = _format_alert(event)
+                notifier.send(subject, body, user.email)
+                session.add(SentAlert(alert_key=key))
+                sent += 1
 
         session.commit()
 

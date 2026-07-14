@@ -13,3 +13,5 @@ SQLAlchemy>=2.0.30,<3.0
 httpx
 apscheduler
 python-dotenv
+uvicorn[standard]
+email-validator

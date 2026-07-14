@@ -43,3 +43,13 @@ class SentAlert(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     alert_key: Mapped[str] = mapped_column(String(80), unique=True)
     sent_at: Mapped[datetime] = mapped_column(default=_utcnow)
+    
+class User(Base):
+    __tablename__ = "users"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    email: Mapped[str] = mapped_column(String(255), unique=True)
+    latitude: Mapped[float]
+    longitude: Mapped[float]
+    active: Mapped[bool] = mapped_column(default=True)
+    created_at: Mapped[datetime] = mapped_column(default=_utcnow)
