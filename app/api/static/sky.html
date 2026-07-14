@@ -9,8 +9,7 @@
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Serif:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root{
-    --ink:#0B1622; --line:#24384A; --star:#EAF0F4; --dim:#8298A8; --faint:#5A6E7E;
-    --amber:#E8A13C;
+    --ink:#0B1622; --line:#24384A; --star:#EAF0F4; --dim:#8298A8; --faint:#5A6E7E; --amber:#E8A13C;
     --sans:"IBM Plex Sans",system-ui,sans-serif;
     --serif:"IBM Plex Serif",Georgia,serif;
     --mono:"IBM Plex Mono",ui-monospace,monospace;
@@ -31,6 +30,7 @@
   button:hover{border-color:var(--amber); color:var(--amber)}
   :focus-visible{outline:2px solid var(--amber); outline-offset:2px}
   #starmap{width:100%; height:70vh; min-height:460px; border:1px solid var(--line); border-radius:5px; overflow:hidden; background:#05080f}
+  .status{font-family:var(--mono); font-size:13px; padding:24px; color:var(--amber)}
   .hint{font-family:var(--mono); font-size:12px; color:var(--faint); margin-top:12px}
 </style>
 </head>
@@ -41,55 +41,51 @@
     <div class="place" id="place">&mdash;</div>
     <a class="back" href="/">&larr; Back to log</a>
   </header>
-
-  <div class="bar">
-    <button id="locate" type="button">Use my location</button>
-  </div>
-
-  <div id="starmap"></div>
+  <div class="bar"><button id="locate" type="button">Use my location</button></div>
+  <div id="starmap"><div class="status" id="status">loading the sky engine&hellip;</div></div>
   <div class="hint">Drag to look around &middot; scroll to zoom &middot; the sky updates live for your location and the current time.</div>
 </div>
 
-<script src="https://slowe.github.io/VirtualSky/virtualsky.min.js"></script>
 <script>
   const params = new URLSearchParams(location.search);
-  const lat = parseFloat(params.get("lat"));
-  const lon = parseFloat(params.get("lon"));
-  const LAT = Number.isFinite(lat) ? lat : 28.36;
-  const LON = Number.isFinite(lon) ? lon : 79.43;
+  const _lat = parseFloat(params.get("lat")), _lon = parseFloat(params.get("lon"));
+  const LAT = Number.isFinite(_lat) ? _lat : 28.36;
+  const LON = Number.isFinite(_lon) ? _lon : 79.43;
 
   function coordText(la, lo){
     const ns = la >= 0 ? "N" : "S", ew = lo >= 0 ? "E" : "W";
     return `${Math.abs(la).toFixed(2)}\u00B0${ns} ${Math.abs(lo).toFixed(2)}\u00B0${ew}`;
   }
   document.getElementById("place").innerHTML = `your sky &middot; <b>${coordText(LAT, LON)}</b>`;
-
   document.getElementById("locate").addEventListener("click", () => {
     if(!navigator.geolocation) return;
-    navigator.geolocation.getCurrentPosition((pos) => {
-      location.href = `/sky?lat=${pos.coords.latitude.toFixed(2)}&lon=${pos.coords.longitude.toFixed(2)}`;
-    });
+    navigator.geolocation.getCurrentPosition((pos) =>
+      location.href = `/sky?lat=${pos.coords.latitude.toFixed(2)}&lon=${pos.coords.longitude.toFixed(2)}`);
   });
 
-  S.virtualsky({
-    id: "starmap",
-    projection: "stereo",
-    latitude: LAT,
-    longitude: LON,
-    constellations: true,
-    constellationlabels: true,
-    showstars: true,
-    showstarlabels: false,
-    showplanets: true,
-    showplanetlabels: true,
-    cardinalpoints: true,
-    ground: true,
-    gradient: true,
-    keyboard: true,
-    mouse: true,
-    live: true,
-    magnitude: 5
-  });
+  function skyFail(msg){ const s = document.getElementById("status"); if(s) s.textContent = "Sky map: " + msg; }
+  function initSky(){
+    const s = document.getElementById("status"); if(s) s.remove();
+    try{
+      S.virtualsky({
+        id: "starmap", projection: "stereo",
+        latitude: LAT, longitude: LON,
+        constellations: true, constellationlabels: true,
+        showstars: true, showstarlabels: false,
+        showplanets: true, showplanetlabels: true,
+        cardinalpoints: true, ground: true, gradient: true,
+        keyboard: true, mouse: true, live: true, magnitude: 5
+      });
+    }catch(err){ skyFail("init error \u2014 " + err.message); }
+  }
+</script>
+
+<!-- stuquery (provides S) MUST load before virtualsky; data files resolve from this same path -->
+<script src="https://cdn.jsdelivr.net/gh/slowe/VirtualSky@master/stuquery.min.js" onerror="skyFail('the S helper (stuquery) failed to load')"></script>
+<script src="https://cdn.jsdelivr.net/gh/slowe/VirtualSky@master/virtualsky.min.js" onerror="skyFail('the virtualsky engine failed to load')"></script>
+<script>
+  if(typeof S === "undefined" || !S.virtualsky){ skyFail("the sky engine is not available (check your connection / console)"); }
+  else { initSky(); }
 </script>
 </body>
 </html>
